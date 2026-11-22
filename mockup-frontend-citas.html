@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup Frontend - Sistema Escolar de Citas (Acudiente y Profesor)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F0F9FF',
+              100: '#E0F2FE',
+              500: '#0EA5E9',
+              600: '#0284C7',
+              700: '#0369A1',
+              900: '#0C4A6E'
+            },
+            teacher: {
+              50: '#ECFDF5',
+              600: '#059669',
+              700: '#047857',
+              900: '#064E3B'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0F172A;
+      color: #F8FAFC;
+    }
+
+    .phone-frame {
+      width: 100%;
+      max-width: 380px;
+      height: 740px;
+      border-radius: 44px;
+      border: 10px solid #1E293B;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #FFFFFF;
+      position: relative;
+    }
+
+    .phone-notch {
+      width: 140px;
+      height: 22px;
+      background: #1E293B;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      margin: 0 auto;
+      z-index: 50;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .slot-btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .slot-btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-between">
+
+  <!-- TOP HEADER / CONTROLES -->
+  <header class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-500/20 text-brand-500 border border-brand-500/30">
+          Mockup Interactivo de la Aplicación
+        </span>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          <i class="fa-solid fa-lock mr-1"></i> HTTPS / TLS 1.3
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-black text-white">
+        Experiencia de Usuario: Acudiente & Profesor
+      </h1>
+      <p class="text-xs md:text-sm text-slate-400">
+        Prueba directamente cómo interactúa el padre desde WhatsApp y cómo gestiona el docente su agenda.
+      </p>
+    </div>
+
+    <!-- SELECTOR DE VISTA -->
+    <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+      <button onclick="setView('parent')" id="tab-parent" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+        <i class="fa-solid fa-mobile-screen"></i> 1. Vista Acudiente (WhatsApp Link)
+      </button>
+      <button onclick="setView('teacher')" id="tab-teacher" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-chalkboard-user"></i> 2. Vista Profesor (Panel Privado)
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DEL SMARTPHONE -->
+  <main class="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-10 my-auto">
+    
+    <!-- SMARTPHONE INTERACTIVO -->
+    <div class="phone-frame text-slate-800 shadow-2xl">
+      <!-- Notch / Parlante superior -->
+      <div class="phone-notch"></div>
+
+      <!-- PANTALLA 1: FLUJO DEL ACUDIENTE -->
+      <div id="view-parent-container" class="flex-1 flex flex-col overflow-y-auto no-scrollbar relative bg-slate-50">
+        
+        <!-- Header Móvil del Colegio -->
+        <div class="bg-brand-600 text-white p-5 pt-3 shadow-md">
+          <div class="flex items-center justify-between text-xs mb-2 text-brand-100">
+            <span class="font-medium"><i class="fa-solid fa-lock mr-1"></i> citas.colegio.edu</span>
+            <span class="bg-brand-700/80 px-2 py-0.5 rounded-full text-[10px] font-bold">100% Cifrado</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-white text-brand-600 flex items-center justify-center font-black text-lg shadow-inner">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+              <h2 class="font-black text-base leading-tight">Colegio San Martín</h2>
+              <p class="text-[11px] text-brand-100">Agendamiento de Citas Docentes</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 1: SELECCIONAR PROFESOR Y HORARIO -->
+        <div id="parent-step-1" class="p-4 space-y-4 flex-1">
+          
+          <div class="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-[11px] flex items-start gap-2">
+            <i class="fa-solid fa-circle-info text-amber-600 mt-0.5 shrink-0"></i>
+            <span>No requiere instalar nada. Seleccione el docente y el horario libre deseado.</span>
+          </div>
+
+          <!-- Selector de Docente -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Seleccione el Profesor:</label>
+            <select id="select-profesor" onchange="updateHorarios()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="prof_garcia">Prof. Carlos García — Matemáticas</option>
+              <option value="prof_rodriguez">Prof. Elena Rodríguez — Ciencias Naturales</option>
+              <option value="prof_martinez">Prof. Andrés Martínez — Español y Literatura</option>
+            </select>
+          </div>
+
+          <!-- Selector de Día -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Fecha de Atención:</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="setFecha('Jue 26 Nov', this)" class="fecha-btn p-2 rounded-xl text-center border-2 border-brand-500 bg-brand-50 text-brand-700 font-bold text-xs">
+                <div>Jueves</div>
+                <div class="text-sm font-black">26 Nov</div>
+              </button>
+              <button onclick="setFecha('Vie 27 Nov', this)" class="fecha-btn p-2 rounded-xl text-center border border-slate-200 bg-white text-slate-600 font-medium text-xs hover:border-slate-300">
+                <div>Viernes</div>
+                <div class="text-sm font-black">27 Nov</div>
+              </button>
+              <button onclick="setFecha('Lun 30 Nov', this)" class="fecha-btn p-2 rounded-xl text-center border border-slate-200 bg-white text-slate-600 font-medium text-xs hover:border-slate-300">
+                <div>Lunes</div>
+                <div class="text-sm font-black">30 Nov</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Horarios Disponibles (Slots) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-bold text-slate-700">Horarios Disponibles:</label>
+              <span class="text-[10px] text-slate-500">20 min por cita</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2" id="slots-container">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+
+          <!-- Formulario rápido del Acudiente -->
+          <div class="space-y-2.5 pt-2 border-t border-slate-200">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-0.5">Nombre del Acudiente (Papá / Mamá):</label>
+              <input type="text" id="parent-name" placeholder="Ej. Mariana Gómez" value="Mariana Gómez" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-0.5">WhatsApp / Celular:</label>
+                <input type="tel" id="parent-phone" placeholder="300 123 4567" value="315 889 4421" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-0.5">Nombre del Alumno:</label>
+                <input type="text" id="parent-student" placeholder="Ej. Mateo Gómez" value="Mateo Gómez (6°B)" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón de Confirmación -->
+          <button onclick="confirmarCitaAcudiente()" id="btn-submit-booking" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-calendar-check"></i> Confirmar Cita (Cero Cruces)
+          </button>
+
+        </div>
+
+        <!-- PASO 2: TICKET DIGITAL DE CONFIRMACIÓN (Oculto inicialmente) -->
+        <div id="parent-step-success" class="p-5 space-y-4 flex-1 hidden flex-col justify-between">
+          <div class="space-y-4 text-center pt-4">
+            <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 text-3xl flex items-center justify-center mx-auto shadow-inner">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Bloqueo Atómico Exitoso
+              </span>
+              <h3 class="text-lg font-black text-slate-900 mt-1">¡Cita Agendada con Éxito!</h3>
+              <p class="text-xs text-slate-500">Este horario ya ha sido bloqueado para otros padres.</p>
+            </div>
+
+            <!-- Tique Detallado -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm text-left space-y-2.5 text-xs">
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-400">Profesor:</span>
+                <span class="font-bold text-slate-800" id="res-profesor">Prof. Carlos García</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-400">Fecha y Hora:</span>
+                <span class="font-bold text-brand-600" id="res-fecha">Jueves 26 Nov - 10:00 AM</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-400">Alumno:</span>
+                <span class="font-bold text-slate-800" id="res-alumno">Mateo Gómez (6°B)</span>
+              </div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">ID Seguro AWS:</span>
+                <span class="font-mono text-slate-500 font-semibold">CITA-9481-OK</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-4">
+            <button onclick="alert('Se descargó el evento a tu calendario de Google/Outlook.')" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-800">
+              <i class="fa-solid fa-calendar-plus"></i> Añadir a Google Calendar
+            </button>
+            <button onclick="resetParentBooking()" class="w-full py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-300">
+              Pedir otra cita
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PANTALLA 2: PANEL PRIVADO DEL PROFESOR (Oculto al inicio) -->
+      <div id="view-teacher-container" class="flex-1 flex flex-col overflow-y-auto no-scrollbar relative bg-slate-50 hidden">
+        
+        <!-- Header del Profesor -->
+        <div class="bg-teacher-700 text-white p-5 pt-3 shadow-md">
+          <div class="flex items-center justify-between text-xs mb-2 text-teacher-50">
+            <span class="font-medium"><i class="fa-solid fa-shield-halved mr-1"></i> Sesión con Cognito</span>
+            <button onclick="alert('Sesión cerrada con seguridad.')" class="text-[10px] bg-teacher-900/60 hover:bg-teacher-900 px-2 py-0.5 rounded-full">
+              Salir
+            </button>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-white text-teacher-700 flex items-center justify-center font-black text-lg">
+                <i class="fa-solid fa-chalkboard-user"></i>
+              </div>
+              <div>
+                <h2 class="font-black text-sm leading-tight">Prof. Carlos García</h2>
+                <p class="text-[11px] text-teacher-50">Docente de Matemáticas</p>
+              </div>
+            </div>
+            <span class="bg-emerald-400 text-slate-950 font-black text-xs px-2.5 py-1 rounded-lg">
+              3 Citas Hoy
+            </span>
+          </div>
+        </div>
+
+        <!-- Contenido del Profesor -->
+        <div class="p-4 space-y-4 flex-1">
+          
+          <!-- Filtro rápido de días -->
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Agenda de Citas</span>
+            <div class="flex gap-1 text-[11px]">
+              <span class="px-2 py-1 bg-teacher-600 text-white font-bold rounded-lg">Hoy</span>
+              <span class="px-2 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg">Semana</span>
+            </div>
+          </div>
+
+          <!-- Lista de Citas asignadas al docente -->
+          <div class="space-y-3" id="teacher-citas-list">
+            
+            <!-- Cita 1 -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="w-1.5 h-full bg-emerald-500 absolute left-0 top-0"></div>
+              <div class="flex items-center justify-between mb-1.5 pl-1.5">
+                <span class="text-xs font-black text-brand-600 flex items-center gap-1">
+                  <i class="fa-regular fa-clock"></i> 09:30 AM - 09:50 AM
+                </span>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Confirmada
+                </span>
+              </div>
+              <div class="pl-1.5">
+                <h4 class="font-bold text-slate-900 text-xs">Mateo Gómez (6°B)</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Acudiente: Mariana Gómez</p>
+                <p class="text-[10px] text-slate-600 italic mt-1 bg-slate-50 p-1.5 rounded">
+                  "Revisar rendimiento en álgebra del segundo periodo."
+                </p>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs pl-1.5">
+                <a href="https://wa.me/573158894421" target="_blank" class="text-emerald-600 font-bold hover:underline flex items-center gap-1 text-[11px]">
+                  <i class="fa-brands fa-whatsapp text-sm"></i> Escribir por WhatsApp
+                </a>
+                <button onclick="cancelarCita(this)" class="text-red-500 text-[10px] font-semibold hover:underline">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <!-- Cita 2 -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="w-1.5 h-full bg-emerald-500 absolute left-0 top-0"></div>
+              <div class="flex items-center justify-between mb-1.5 pl-1.5">
+                <span class="text-xs font-black text-brand-600 flex items-center gap-1">
+                  <i class="fa-regular fa-clock"></i> 10:30 AM - 10:50 AM
+                </span>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Confirmada
+                </span>
+              </div>
+              <div class="pl-1.5">
+                <h4 class="font-bold text-slate-900 text-xs">Sofía Ramírez (8°A)</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Acudiente: Roberto Ramírez</p>
+                <p class="text-[10px] text-slate-600 italic mt-1 bg-slate-50 p-1.5 rounded">
+                  "Dudas sobre trabajo final de geometría."
+                </p>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs pl-1.5">
+                <a href="#" class="text-emerald-600 font-bold hover:underline flex items-center gap-1 text-[11px]">
+                  <i class="fa-brands fa-whatsapp text-sm"></i> Escribir por WhatsApp
+                </a>
+                <button onclick="cancelarCita(this)" class="text-red-500 text-[10px] font-semibold hover:underline">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <!-- Cita 3 -->
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div class="w-1.5 h-full bg-emerald-500 absolute left-0 top-0"></div>
+              <div class="flex items-center justify-between mb-1.5 pl-1.5">
+                <span class="text-xs font-black text-brand-600 flex items-center gap-1">
+                  <i class="fa-regular fa-clock"></i> 11:30 AM - 11:50 AM
+                </span>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Confirmada
+                </span>
+              </div>
+              <div class="pl-1.5">
+                <h4 class="font-bold text-slate-900 text-xs">Camilo Castro (10°C)</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Acudiente: Claudia Morales</p>
+                <p class="text-[10px] text-slate-600 italic mt-1 bg-slate-50 p-1.5 rounded">
+                  "Entrega de calificaciones de cálculo."
+                </p>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs pl-1.5">
+                <a href="#" class="text-emerald-600 font-bold hover:underline flex items-center gap-1 text-[11px]">
+                  <i class="fa-brands fa-whatsapp text-sm"></i> Escribir por WhatsApp
+                </a>
+                <button onclick="cancelarCita(this)" class="text-red-500 text-[10px] font-semibold hover:underline">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Botón de acción para el profesor -->
+          <div class="pt-2">
+            <button onclick="alert('Franja de 11:00 AM a 11:30 AM bloqueada en DynamoDB. Ningún acudiente podrá tomarla.')" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-ban"></i> Bloquear Horario Personal
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- PANEL LATERAL DE EXPLICACIÓN Y DEMOSTRACIÓN ANTI-CRUCE -->
+    <div class="w-full lg:max-w-md space-y-5 text-left">
+      
+      <!-- Card: Características Clave -->
+      <div class="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-500">
+          Diseñado para Celulares
+        </span>
+        <h3 class="text-xl font-bold text-white">¿Por qué esta interfaz elimina el caos?</h3>
+        <ul class="space-y-2.5 text-xs text-slate-300">
+          <li class="flex items-start gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+            <span><strong>Cero Barrera de Entrada:</strong> El padre solo abre el enlace que recibe en WhatsApp. No crea contraseñas complejas.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+            <span><strong>Privacidad Docente:</strong> El profesor entra a su vista privada y ve con un clic quién es el alumno y el botón directo para responder al WhatsApp del padre.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+            <span><strong>Horarios en Bloques:</strong> El padre solo puede escoger slots predefinidos (20 minutos), evitando que pidan citas a cualquier hora.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- BOTÓN DE PRUEBA: SIMULAR INTENTO DE CRUCE -->
+      <div class="bg-gradient-to-br from-amber-950/40 to-slate-900 rounded-2xl p-6 border border-amber-500/30 space-y-3">
+        <div class="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+          <i class="fa-solid fa-bolt"></i> Prueba del Motor Anti-Cruce
+        </div>
+        <h4 class="font-bold text-white text-base">¿Qué pasa si 2 padres eligen la misma hora?</h4>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Haz clic en el siguiente botón para simular que otro acudiente se adelantó por 2 milisegundos y reservó el horario que estabas mirando:
+        </p>
+        <button onclick="simularColision()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-shield-virus"></i> Simular Conflicto Simultáneo
+        </button>
+      </div>
+
+      <!-- ALERTA DINÁMICA DE CONFLICTO (Oculta al inicio) -->
+      <div id="conflict-alert" class="hidden bg-red-950/80 border-2 border-red-500 text-red-200 p-4 rounded-2xl space-y-1.5 animate-bounce">
+        <div class="flex items-center gap-2 font-bold text-sm text-red-400">
+          <i class="fa-solid fa-triangle-exclamation"></i> ¡Horario recién reservado!
+        </div>
+        <p class="text-xs leading-relaxed">
+          <strong>DynamoDB rechazó la operación (409 Conflict):</strong> Otro acudiente confirmó las <strong>10:00 AM</strong> justo antes. El sistema actualizó la pantalla automáticamente para que selecciones las <strong>10:30 AM</strong>. ¡Cita no cruzada!
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- SCRIPT DE INTERACTIVIDAD -->
+  <script>
+    let selectedSlot = "10:00 AM";
+    let selectedFecha = "Jue 26 Nov";
+
+    const horariosData = {
+      prof_garcia: [
+        { hora: "08:30 AM", estado: "disponible" },
+        { hora: "09:00 AM", estado: "disponible" },
+        { hora: "09:30 AM", estado: "ocupado" },
+        { hora: "10:00 AM", estado: "disponible" },
+        { hora: "10:30 AM", estado: "ocupado" },
+        { hora: "11:30 AM", estado: "ocupado" }
+      ],
+      prof_rodriguez: [
+        { hora: "07:30 AM", estado: "disponible" },
+        { hora: "08:00 AM", estado: "disponible" },
+        { hora: "08:30 AM", estado: "ocupado" },
+        { hora: "09:00 AM", estado: "disponible" },
+        { hora: "10:00 AM", estado: "disponible" }
+      ],
+      prof_martinez: [
+        { hora: "10:00 AM", estado: "disponible" },
+        { hora: "10:30 AM", estado: "disponible" },
+        { hora: "11:00 AM", estado: "disponible" }
+      ]
+    };
+
+    function updateHorarios() {
+      const profId = document.getElementById('select-profesor').value;
+      const slots = horariosData[profId] || [];
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '';
+
+      slots.forEach(slot => {
+        const btn = document.createElement('button');
+        if (slot.estado === 'ocupado') {
+          btn.className = "slot-btn p-2 rounded-xl text-center border border-slate-200 bg-slate-100 text-slate-400 font-medium text-xs cursor-not-allowed";
+          btn.disabled = true;
+          btn.innerHTML = `<span>${slot.hora}</span> <span class="block text-[9px] text-red-400 font-bold">Ocupado</span>`;
+        } else {
+          const isSelected = slot.hora === selectedSlot;
+          btn.className = isSelected 
+            ? "slot-btn p-2 rounded-xl text-center border-2 border-brand-500 bg-brand-50 text-brand-700 font-bold text-xs"
+            : "slot-btn p-2 rounded-xl text-center border border-slate-200 bg-white text-slate-700 font-medium text-xs hover:border-brand-300";
+          btn.onclick = () => selectSlot(slot.hora, btn);
+          btn.innerHTML = `<span>${slot.hora}</span> <span class="block text-[9px] text-emerald-600 font-bold">Libre</span>`;
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function selectSlot(hora, btnElement) {
+      selectedSlot = hora;
+      document.querySelectorAll('#slots-container .slot-btn').forEach(b => {
+        if (!b.disabled) {
+          b.className = "slot-btn p-2 rounded-xl text-center border border-slate-200 bg-white text-slate-700 font-medium text-xs hover:border-brand-300";
+        }
+      });
+      btnElement.className = "slot-btn p-2 rounded-xl text-center border-2 border-brand-500 bg-brand-50 text-brand-700 font-bold text-xs";
+    }
+
+    function setFecha(fecha, btn) {
+      selectedFecha = fecha;
+      document.querySelectorAll('.fecha-btn').forEach(b => {
+        b.className = "fecha-btn p-2 rounded-xl text-center border border-slate-200 bg-white text-slate-600 font-medium text-xs hover:border-slate-300";
+      });
+      btn.className = "fecha-btn p-2 rounded-xl text-center border-2 border-brand-500 bg-brand-50 text-brand-700 font-bold text-xs";
+    }
+
+    function confirmarCitaAcudiente() {
+      const selectProf = document.getElementById('select-profesor');
+      const profName = selectProf.options[selectProf.selectedIndex].text.split('—')[0].trim();
+      const alumno = document.getElementById('parent-student').value;
+
+      document.getElementById('res-profesor').innerText = profName;
+      document.getElementById('res-fecha').innerText = `${selectedFecha} - ${selectedSlot}`;
+      document.getElementById('res-alumno').innerText = alumno;
+
+      document.getElementById('parent-step-1').classList.add('hidden');
+      document.getElementById('parent-step-success').classList.remove('hidden');
+    }
+
+    function resetParentBooking() {
+      document.getElementById('parent-step-success').classList.add('hidden');
+      document.getElementById('parent-step-1').classList.remove('hidden');
+      updateHorarios();
+    }
+
+    function setView(view) {
+      const parentContainer = document.getElementById('view-parent-container');
+      const teacherContainer = document.getElementById('view-teacher-container');
+      const tabParent = document.getElementById('tab-parent');
+      const tabTeacher = document.getElementById('tab-teacher');
+
+      if (view === 'parent') {
+        parentContainer.classList.remove('hidden');
+        teacherContainer.classList.add('hidden');
+        tabParent.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-brand-600 text-white shadow-lg shadow-brand-600/30";
+        tabTeacher.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white";
+      } else {
+        parentContainer.classList.add('hidden');
+        teacherContainer.classList.remove('hidden');
+        tabTeacher.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-teacher-600 text-white shadow-lg shadow-teacher-600/30";
+        tabParent.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white";
+      }
+    }
+
+    function simularColision() {
+      setView('parent');
+      resetParentBooking();
+      const alertBox = document.getElementById('conflict-alert');
+      alertBox.classList.remove('hidden');
+
+      // Marcar 10:00 AM como ocupado de inmediato en la UI
+      horariosData.prof_garcia[3].estado = "ocupado";
+      updateHorarios();
+
+      setTimeout(() => {
+        alertBox.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+    }
+
+    function cancelarCita(btn) {
+      if (confirm('¿Desea cancelar esta cita? El acudiente recibirá aviso automático por WhatsApp.')) {
+        const card = btn.closest('.bg-white');
+        card.style.opacity = '0.4';
+        btn.innerText = "Cancelada";
+        btn.disabled = true;
+      }
+    }
+
+    // Inicializar slots
+    updateHorarios();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitectura de Solución AWS Serverless - Sistema de Citas Escolares con Cifrado Integral</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            aws: {
+              squid: '#232F3E',
+              dark: '#0F172A',
+              orange: '#FF9900',
+              blue: '#0073BB',
+              lightBlue: '#E7F3FF',
+              green: '#10B981',
+              lightGreen: '#ECFDF5',
+              purple: '#8B5CF6',
+              cyan: '#06B6D4'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8FAFC;
+      color: #1E293B;
+    }
+    
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .step-active {
+      ring-4 ring-aws-orange/40 transform: scale(1.03);
+      border-color: #FF9900 !important;
+      background-color: #FFFBEB !important;
+    }
+
+    .node-transition {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pulse-glow {
+      animation: glow 1.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 5px rgba(255, 153, 0, 0.2); }
+      to { box-shadow: 0 0 20px rgba(255, 153, 0, 0.6); }
+    }
+
+    .security-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .shadow-xl, .shadow-lg, .shadow-md, .shadow-sm { box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen pb-16">
+
+  <!-- TOP EXECUTIVE BANNER -->
+  <header class="bg-aws-squid text-white border-b-4 border-aws-orange sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-1.5">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-aws-orange text-slate-900">
+              Arquitectura Cloud Enterprise
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <i class="fa-solid fa-server mr-1"></i> 100% Serverless ($0 Servidores)
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+              <i class="fa-solid fa-shield-halved"></i> Cifrado en Tránsito (TLS 1.3)
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+              <i class="fa-solid fa-lock"></i> Cifrado en Reposo (AES-256 KMS)
+            </span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            Sistema Escolar Anti-Colisión de Citas
+          </h1>
+          <p class="text-slate-300 text-xs sm:text-sm mt-0.5">
+            Gestión móvil para acudientes, agenda privada por profesor y seguridad criptográfica integral de datos de menores.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 no-print shrink-0">
+          <button onclick="window.print()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5 text-slate-200">
+            <i class="fa-solid fa-print"></i> Imprimir / PDF
+          </button>
+          <a href="#seguridad" class="px-3 py-2 bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-lock"></i> Ver Seguridad
+          </a>
+          <a href="#simulador" class="px-4 py-2 bg-aws-orange hover:bg-amber-500 text-slate-950 text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5">
+            <i class="fa-solid fa-play"></i> Probar Simulador
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-10">
+
+    <!-- RESUMEN DE PILARES DE SEGURIDAD (BANNER ESPECIAL) -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-800 to-aws-squid text-white rounded-2xl p-6 border border-slate-700 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+            <i class="fa-solid fa-shield-virus"></i> Cumplimiento & Protección de Datos Institucionales
+          </div>
+          <h2 class="text-xl font-bold">Garantía Criptográfica de Extremo a Extremo</h2>
+          <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Protección estricta de la información personal de alumnos, padres y docentes en estricto cumplimiento con leyes de protección de datos personales (Habeas Data).
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 w-full md:w-auto shrink-0">
+          <div class="bg-slate-800/80 p-3.5 rounded-xl border border-cyan-500/30 text-left">
+            <div class="text-cyan-400 font-black text-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i> EN TRÁNSITO
+            </div>
+            <div class="text-xs font-bold text-white mt-0.5">TLS 1.3 / HTTPS</div>
+            <div class="text-[10px] text-slate-400 mt-1">Cifrado obligatorio, HSTS y certificados gestionados por AWS ACM.</div>
+          </div>
+          <div class="bg-slate-800/80 p-3.5 rounded-xl border border-purple-500/30 text-left">
+            <div class="text-purple-400 font-black text-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-database"></i> EN REPOSO
+            </div>
+            <div class="text-xs font-bold text-white mt-0.5">AES-256 / AWS KMS</div>
+            <div class="text-[10px] text-slate-400 mt-1">Tablas DynamoDB y archivos S3 cifrados con llaves rotadas.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. RESUMEN EJECUTIVO: 3 PROBLEMAS RESUELTOS -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      
+      <!-- Card 1 -->
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center text-lg font-bold">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-sky-600 uppercase tracking-wider">Para el Acudiente</span>
+            <h3 class="font-bold text-slate-800 text-base">Cita desde el Celular</h3>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Los padres reciben un enlace corto en WhatsApp. <strong>No tienen que descargar ninguna app</strong>. Al abrirlo, eligen al profesor y seleccionan en un calendario los únicos horarios libres disponibles.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg font-bold">
+            <i class="fa-solid fa-chalkboard-user"></i>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Para el Profesor</span>
+            <h3 class="font-bold text-slate-800 text-base">Agenda Individual Privada</h3>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Cada docente ingresa con su usuario y contraseña segura (Cognito). <strong>Solo puede ver sus citas</strong>, nunca las de sus colegas. Puede bloquear horas personales y cancelar citas con aviso automático.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-lg font-bold">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Cero Cruces y $0 Costo</span>
+            <h3 class="font-bold text-slate-800 text-base">Bloqueo Atómico en DB</h3>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Amazon DynamoDB garantiza matemáticamente que <strong>nunca dos padres reserven la misma hora</strong>. Y al ser 100% Serverless, si nadie pide citas, el costo de AWS es exactamente <strong>$0 pesos</strong>.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- 2. DIAGRAMA DE ARQUITECTURA VISUAL POR CAPAS CON ETIQUETAS DE SEGURIDAD -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-slate-200 gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-aws-blue">Mapa de Relaciones, Datos y Seguridad</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Diagrama de Arquitectura de Extremo a Extremo
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Visualización organizada de izquierda a derecha con los mecanismos criptográficos aplicados en cada componente.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <span class="security-badge bg-cyan-100 text-cyan-800 border border-cyan-300">
+            <i class="fa-solid fa-lock"></i> En Tránsito: TLS 1.3
+          </span>
+          <span class="security-badge bg-purple-100 text-purple-800 border border-purple-300">
+            <i class="fa-solid fa-database"></i> En Reposo: AES-256 KMS
+          </span>
+          <span class="security-badge bg-sky-100 text-sky-800 border border-sky-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Flujo Acudiente
+          </span>
+          <span class="security-badge bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Flujo Profesor
+          </span>
+        </div>
+      </div>
+
+      <!-- SWIMLANES / CAPAS HORIZONTALES -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 relative">
+
+        <!-- COLUMNA 1: USUARIOS (CANALES) -->
+        <div class="flex flex-col space-y-4">
+          <div class="bg-slate-100 rounded-lg p-2.5 text-center">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. Usuarios</span>
+            <p class="text-[11px] text-slate-500">Dispositivos móviles</p>
+          </div>
+
+          <!-- Acudiente -->
+          <div id="arch-parent" class="node-transition bg-white p-4 rounded-xl border-2 border-sky-200 shadow-sm hover:border-sky-500 text-left relative">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 rounded-lg bg-sky-500 text-white flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-mobile-screen"></i>
+              </div>
+              <span class="security-badge bg-cyan-50 text-cyan-700 border border-cyan-200">
+                <i class="fa-solid fa-lock"></i> TLS 1.3
+              </span>
+            </div>
+            <div class="text-[10px] font-bold text-sky-600 uppercase">Sin Instalar Apps</div>
+            <div class="font-bold text-slate-900 text-sm">Acudiente</div>
+            <p class="text-[11px] text-slate-500 mt-1">Abre el enlace recibido por WhatsApp en su navegador móvil.</p>
+            <div class="mt-2 text-[10px] bg-sky-50 text-sky-800 p-1.5 rounded font-mono font-medium">
+              https://citas.colegio.edu
+            </div>
+          </div>
+
+          <!-- Profesor -->
+          <div id="arch-teacher" class="node-transition bg-white p-4 rounded-xl border-2 border-emerald-200 shadow-sm hover:border-emerald-500 text-left relative">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-chalkboard-user"></i>
+              </div>
+              <span class="security-badge bg-cyan-50 text-cyan-700 border border-cyan-200">
+                <i class="fa-solid fa-lock"></i> TLS 1.3
+              </span>
+            </div>
+            <div class="text-[10px] font-bold text-emerald-600 uppercase">Acceso Privado</div>
+            <div class="font-bold text-slate-900 text-sm">Profesor</div>
+            <p class="text-[11px] text-slate-500 mt-1">Ingresa desde su móvil o PC con correo y clave escolar.</p>
+            <div class="mt-2 text-[10px] bg-emerald-50 text-emerald-800 p-1.5 rounded font-mono font-medium">
+              JWT Bearer Token
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA 2: EDGE Y ENTREGA WEB -->
+        <div class="flex flex-col space-y-4">
+          <div class="bg-slate-100 rounded-lg p-2.5 text-center">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Entrega Web</span>
+            <p class="text-[11px] text-slate-500">Carga rápida y SSL</p>
+          </div>
+
+          <!-- CloudFront + S3 -->
+          <div id="arch-cloudfront" class="node-transition bg-white p-4 rounded-xl border-2 border-amber-200 shadow-sm hover:border-aws-orange text-left h-full flex flex-col justify-between relative">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center text-sm font-bold">
+                  <i class="fa-solid fa-globe"></i>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="security-badge bg-cyan-50 text-cyan-700 border border-cyan-200">
+                    <i class="fa-solid fa-certificate"></i> ACM SSL Gratis
+                  </span>
+                  <span class="security-badge bg-purple-50 text-purple-700 border border-purple-200">
+                    <i class="fa-solid fa-shield"></i> S3 SSE-AES256
+                  </span>
+                </div>
+              </div>
+              <div class="text-[10px] font-bold text-amber-600 uppercase">CDN + Almacén Cifrado</div>
+              <div class="font-bold text-slate-900 text-sm">CloudFront & S3</div>
+              <p class="text-[11px] text-slate-500 mt-1.5">
+                Redirección obligatoria HTTP &rarr; HTTPS. S3 protegido con <strong>Origin Access Control (OAC)</strong> y cifrado SSE-S3 en reposo.
+              </p>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-1 text-[10px]">
+              <span class="text-cyan-700 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-shield-halved"></i> HSTS (Max-Age 31536000)
+              </span>
+              <span class="text-emerald-700 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-circle-check"></i> 1 TB mensual GRATIS
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA 3: SEGURIDAD Y API GATEWAY -->
+        <div class="flex flex-col space-y-4">
+          <div class="bg-slate-100 rounded-lg p-2.5 text-center">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">3. Seguridad & API</span>
+            <p class="text-[11px] text-slate-500">Control de acceso</p>
+          </div>
+
+          <!-- Cognito (Auth) -->
+          <div id="arch-cognito" class="node-transition bg-white p-3.5 rounded-xl border-2 border-purple-200 shadow-sm hover:border-purple-500 text-left">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-md bg-purple-600 text-white flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-purple-600 uppercase">Login Docente</span>
+                  <div class="font-bold text-slate-900 text-xs">Amazon Cognito</div>
+                </div>
+              </div>
+              <span class="security-badge bg-purple-100 text-purple-800">
+                Hash Salt
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-500">
+              Claves hasheadas con PBKDF2/SHA256 en reposo. Emite Token JWT cifrado en tránsito.
+            </p>
+          </div>
+
+          <!-- API Gateway -->
+          <div id="arch-apigateway" class="node-transition bg-white p-3.5 rounded-xl border-2 border-pink-200 shadow-sm hover:border-pink-500 text-left">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-md bg-pink-600 text-white flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-route"></i>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-pink-600 uppercase">Enrutador HTTP</span>
+                  <div class="font-bold text-slate-900 text-xs">API Gateway</div>
+                </div>
+              </div>
+              <span class="security-badge bg-cyan-100 text-cyan-800">
+                TLS 1.2+
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-500">
+              Terminación TLS segura. Valida la firma del JWT antes de invocar a Lambda.
+            </p>
+          </div>
+        </div>
+
+        <!-- COLUMNA 4: CÓMPUTO SERVERLESS -->
+        <div class="flex flex-col space-y-4">
+          <div class="bg-slate-100 rounded-lg p-2.5 text-center">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">4. Lógica de Negocio</span>
+            <p class="text-[11px] text-slate-500">Ejecución bajo demanda</p>
+          </div>
+
+          <!-- AWS Lambda -->
+          <div id="arch-lambda" class="node-transition bg-white p-4 rounded-xl border-2 border-orange-200 shadow-sm hover:border-orange-500 text-left h-full flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 rounded-lg bg-aws-orange text-white flex items-center justify-center text-sm font-bold">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <span class="security-badge bg-amber-50 text-amber-800 border border-amber-200">
+                  <i class="fa-solid fa-id-badge"></i> IAM Role Mínimo
+                </span>
+              </div>
+              <div class="text-[10px] font-bold text-orange-600 uppercase">Cómputo Serverless</div>
+              <div class="font-bold text-slate-900 text-sm">AWS Lambda</div>
+              <ul class="text-[11px] text-slate-600 space-y-1.5 mt-2">
+                <li class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  <code>getHorariosDisponibles()</code>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  <code>reservarConBloqueo()</code>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  <code>getCitasPorProfesor(ID)</code>
+                </li>
+              </ul>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100 text-[10px] text-cyan-700 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-lock"></i> SDK con firma AWS SigV4
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA 5: PERSISTENCIA Y AVISOS -->
+        <div class="flex flex-col space-y-4">
+          <div class="bg-slate-100 rounded-lg p-2.5 text-center">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">5. Base de Datos & Avisos</span>
+            <p class="text-[11px] text-slate-500">Bloqueo y mensajería</p>
+          </div>
+
+          <!-- DynamoDB -->
+          <div id="arch-dynamodb" class="node-transition bg-white p-3.5 rounded-xl border-2 border-blue-200 shadow-sm hover:border-blue-600 text-left">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-database"></i>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-blue-600 uppercase">Anti-Colisión</span>
+                  <div class="font-bold text-slate-900 text-xs">Amazon DynamoDB</div>
+                </div>
+              </div>
+              <span class="security-badge bg-purple-100 text-purple-800 border border-purple-300">
+                <i class="fa-solid fa-key"></i> KMS AES-256
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-500">
+              <strong>Reposo:</strong> Cifrado completo con AWS KMS. <strong>Tránsito:</strong> TLS interno. Condición atómica anti-cruce.
+            </p>
+            <div class="mt-2 text-[9px] text-emerald-700 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-check"></i> Cifrado nativo sin costo extra
+            </div>
+          </div>
+
+          <!-- Amazon SES / WhatsApp -->
+          <div id="arch-ses" class="node-transition bg-white p-3.5 rounded-xl border-2 border-slate-200 shadow-sm hover:border-purple-500 text-left">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-md bg-purple-600 text-white flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-purple-600 uppercase">Avisos Inmediatos</span>
+                  <div class="font-bold text-slate-900 text-xs">SES / WhatsApp</div>
+                </div>
+              </div>
+              <span class="security-badge bg-cyan-100 text-cyan-800">
+                TLS / HTTPS
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-500">
+              Envío cifrado por túnel HTTPS seguro hacia APIs oficiales de mensajería.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- GUÍA VISUAL DE CIFRADO ENTRE COMPONENTES -->
+      <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-cat text-cyan-600"></i> Cadena de Custodia:
+          </span>
+          <span>Ningún dato viaja en texto plano ni se almacena sin cifrar en ningún punto del sistema.</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 font-mono text-[10px]">
+          <span class="bg-cyan-100 text-cyan-800 px-2.5 py-1 rounded border border-cyan-200 font-bold">
+            <i class="fa-solid fa-lock mr-1"></i> Tránsito: TLS 1.3 / SigV4
+          </span>
+          <span class="bg-purple-100 text-purple-800 px-2.5 py-1 rounded border border-purple-200 font-bold">
+            <i class="fa-solid fa-database mr-1"></i> Reposo: AES-256 (KMS)
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. MATRIZ DETALLADA DE SEGURIDAD EN TRÁNSITO Y REPOSO (NUEVA SECCIÓN) -->
+    <section id="seguridad" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 scroll-mt-24">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-200 gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-cyan-600">Auditoría Técnica y Cumplimiento</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Matriz de Seguridad: En Tránsito vs. En Reposo
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Detalle técnico de los algoritmos, llaves criptográficas y protocolos implementados en cada componente.
+          </p>
+        </div>
+        <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-50 text-cyan-700 border border-cyan-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-certificate"></i> AWS Security Best Practices
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+            <tr>
+              <th class="p-3.5">Componente / Servicio</th>
+              <th class="p-3.5 text-cyan-800"><i class="fa-solid fa-arrow-right-arrow-left mr-1"></i> Seguridad en Tránsito</th>
+              <th class="p-3.5 text-purple-800"><i class="fa-solid fa-database mr-1"></i> Seguridad en Reposo</th>
+              <th class="p-3.5">Protección de Datos & Privacidad</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-slate-600">
+            <!-- Fila 1: Celulares a CloudFront -->
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-slate-900">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-globe text-amber-500"></i>
+                  <span>CloudFront + S3 (Web)</span>
+                </div>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-cyan-700">HTTPS con TLS 1.3 / TLS 1.2</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Certificado SSL gratuito de AWS ACM. Redirección forzada de HTTP a HTTPS y cabeceras HSTS.</p>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-purple-700">SSE-S3 / SSE-KMS (AES-256)</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">El bucket S3 tiene bloqueo público total. Solo accesible vía Origin Access Control (OAC).</p>
+              </td>
+              <td class="p-3.5 text-[11px]">
+                Código web estático sin credenciales ni secretos incrustados.
+              </td>
+            </tr>
+
+            <!-- Fila 2: API Gateway & Auth -->
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-slate-900">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-route text-pink-500"></i>
+                  <span>Amazon API Gateway</span>
+                </div>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-cyan-700">Cifrado TLS 1.2+ obligatorio</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">No acepta conexiones inseguras. Verificación de firma JWT en cada petición.</p>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-purple-700">Sin persistencia (Efemero)</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">API Gateway actúa de pasarela pura de tráfico, no almacena datos de citas.</p>
+              </td>
+              <td class="p-3.5 text-[11px]">
+                Protege contra ataques de denegación con Throttling por IP.
+              </td>
+            </tr>
+
+            <!-- Fila 3: Cognito -->
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-slate-900">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-key text-purple-500"></i>
+                  <span>Amazon Cognito (Profesores)</span>
+                </div>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-cyan-700">OAuth 2.0 / OIDC sobre TLS</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Tokens JWT firmados con algoritmo asimétrico RS256/ES256.</p>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-purple-700">Hashing con Salt (PBKDF2/SHA-256)</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Las contraseñas de los profesores nunca se conocen ni se guardan en texto claro.</p>
+              </td>
+              <td class="p-3.5 text-[11px]">
+                Aislamiento estricto: El token limita las consultas solo al ID del docente.
+              </td>
+            </tr>
+
+            <!-- Fila 4: Lambda -->
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-slate-900">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-bolt text-orange-500"></i>
+                  <span>AWS Lambda (Cómputo)</span>
+                </div>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-cyan-700">AWS SigV4 sobre HTTPS</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Llamadas a DynamoDB autenticadas criptográficamente con tokens temporales de IAM.</p>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-purple-700">MicroVMs Aisladas (AWS Firecracker)</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Memoria RAM destruida al finalizar la ejecución; variables de entorno cifradas con KMS.</p>
+              </td>
+              <td class="p-3.5 text-[11px]">
+                Principio de mínimo privilegio: el rol no puede borrar bases de datos.
+              </td>
+            </tr>
+
+            <!-- Fila 5: DynamoDB -->
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3.5 font-bold text-slate-900">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-database text-blue-600"></i>
+                  <span>Amazon DynamoDB (Citas)</span>
+                </div>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-cyan-700">Endpoints TLS 1.3 de AWS</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Tráfico cifrado dentro del backbone de alta velocidad de AWS.</p>
+              </td>
+              <td class="p-3.5">
+                <span class="font-semibold text-purple-700">Cifrado Nativo AES-256 (AWS KMS)</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Tablas, índices y backups automáticos totalmente cifrados en los discos duros físicos.</p>
+              </td>
+              <td class="p-3.5 text-[11px]">
+                <strong>Protección de Menores:</strong> Nombres y motivos de cita siempre cifrados en disco.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- 4. SIMULADOR INTERACTIVO PASO A PASO CON TELEMETRÍA DE SEGURIDAD -->
+    <section id="simulador" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 scroll-mt-24">
+      
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-slate-200 gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-aws-orange">Entendimiento Interactivo</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Simulador de Recorrido Paso a Paso
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Comprueba en vivo cómo viajan los datos cifrados y cómo se aplican los bloqueos anti-cruce.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button onclick="runSimulation('parent')" id="sim-btn-parent" class="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-play"></i> Simular: Acudiente pide Cita
+          </button>
+          <button onclick="runSimulation('teacher')" id="sim-btn-teacher" class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-play"></i> Simular: Profesor ve su Agenda
+          </button>
+          <button onclick="resetSimulation()" class="px-3 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reiniciar
+          </button>
+        </div>
+      </div>
+
+      <!-- SIMULATION DISPLAY SCREEN -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Pasos interactivos -->
+        <div class="lg:col-span-7 space-y-3" id="simulation-steps">
+          
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs">
+            Haz clic en <strong>"Simular: Acudiente pide Cita"</strong> o <strong>"Simular: Profesor ve su Agenda"</strong> para iniciar la explicación interactiva paso a paso con detalle de seguridad.
+          </div>
+
+        </div>
+
+        <!-- Pantalla de Estado / Explicación del Motor Anti-Cruce y Criptografía -->
+        <div class="lg:col-span-5 bg-aws-squid text-white rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700 mb-3">
+              <span class="text-xs font-bold uppercase text-aws-orange tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-terminal"></i> Consola de Seguridad y Cifrado
+              </span>
+              <span id="sim-status-badge" class="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono">
+                En espera
+              </span>
+            </div>
+            <div id="sim-log" class="font-mono text-xs text-slate-300 space-y-2 leading-relaxed min-h-[140px]">
+              <p class="text-slate-400">// Selecciona un flujo para visualizar la ejecución y cifrado en vivo.</p>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-700/80 text-[11px] text-slate-400 flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-cyan-400">
+              <i class="fa-solid fa-shield"></i> Cifrado Activo: TLS 1.3 + AES-256
+            </span>
+            <span class="text-emerald-400 font-bold">&lt; 180 ms</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 5. DEMOSTRACIÓN VISUAL: ¿POR QUÉ NUNCA SE CRUZAN LAS CITAS? -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+      
+      <div class="max-w-3xl mb-6">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Resolución del Problema Central</span>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+          La Mecánica Anti-Cruce (Comparativa Directa)
+        </h2>
+        <p class="text-xs text-slate-500 mt-1">
+          Por qué WhatsApp falla y cómo la base de datos de AWS elimina el error humano al 100%.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- El Problema en WhatsApp -->
+        <div class="p-5 rounded-xl border-2 border-red-200 bg-red-50/50">
+          <div class="flex items-center gap-2 text-red-600 font-bold text-sm mb-3">
+            <i class="fa-solid fa-circle-xmark text-lg"></i>
+            <h3>El Problema actual en WhatsApp</h3>
+          </div>
+          <ol class="space-y-3 text-xs text-slate-700">
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-red-500">1.</span>
+              <span><strong>Padre A</strong> escribe por WhatsApp: <em>"¿Hay cita el jueves a las 10:00 am?"</em></span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-red-500">2.</span>
+              <span>La secretaria o el profesor está ocupado y responde 20 minutos después: <em>"Sí, claro"</em>.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-red-500">3.</span>
+              <span>En ese intervalo, el <strong>Padre B</strong> escribió por otro chat y otra persona le confirmó el mismo horario.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-red-500">4.</span>
+              <span><strong>Resultado:</strong> El jueves llegan dos familias a la misma hora. Incomodidad y tiempo perdido.</span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- La Solución en AWS Serverless -->
+        <div class="p-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/50">
+          <div class="flex items-center gap-2 text-emerald-700 font-bold text-sm mb-3">
+            <i class="fa-solid fa-circle-check text-lg"></i>
+            <h3>La Solución Automatizada con DynamoDB</h3>
+          </div>
+          <ol class="space-y-3 text-xs text-slate-700">
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-emerald-600">1.</span>
+              <span>Ambos padres entran desde su celular y ven las <strong>10:00 AM</strong> disponible.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-emerald-600">2.</span>
+              <span>Si ambos pulsan "Confirmar" exactamente en el mismo segundo:</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-emerald-600">3.</span>
+              <span>DynamoDB ejecuta un bloqueo atómico: el primero gana la plaza en 5 milisegundos.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="font-bold text-emerald-600">4.</span>
+              <span><strong>Resultado:</strong> El Padre A recibe confirmación; al Padre B la pantalla le avisa de inmediato: <em>"Horario recién ocupado, por favor elija las 10:30 am"</em>. Imposible cruzarse.</span>
+            </li>
+          </ol>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 6. TABLA DE COSTOS REALES: CERO PESOS / CERO DÓLARES -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-200 gap-2">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-aws-blue">Transparencia Financiera</span>
+          <h2 class="text-xl font-black text-slate-900">
+            ¿Por qué la factura de AWS será de $0.00 al mes (incluyendo la seguridad)?
+          </h2>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+          Cifrado Incluido Sin Costo
+        </span>
+      </div>
+
+      <p class="text-xs text-slate-600 mb-6 leading-relaxed">
+        El cifrado en reposo (SSE-KMS nativo) y los certificados SSL de AWS Certificate Manager (ACM) son <strong>100% gratuitos</strong> para estos servicios. No hay recargos por proteger los datos:
+      </p>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+            <tr>
+              <th class="p-3">Servicio AWS</th>
+              <th class="p-3">Uso Mensual del Colegio (~1.000 citas)</th>
+              <th class="p-3">Lo que AWS da GRATIS al Mes</th>
+              <th class="p-3 text-right">Costo a Pagar</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-slate-600">
+            <tr>
+              <td class="p-3 font-semibold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-aws-orange"></i> AWS Lambda (Lógica)
+              </td>
+              <td class="p-3">~15.000 ejecuciones</td>
+              <td class="p-3 text-emerald-600 font-medium">1.000.000 ejecuciones de por vida</td>
+              <td class="p-3 text-right font-bold text-emerald-600">$0.00 USD</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-database text-blue-600"></i> Amazon DynamoDB (Cifrado KMS)
+              </td>
+              <td class="p-3">~25 MB guardados</td>
+              <td class="p-3 text-emerald-600 font-medium">25.000 MB (25 GB) de por vida</td>
+              <td class="p-3 text-right font-bold text-emerald-600">$0.00 USD</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-key text-purple-600"></i> Amazon Cognito (Profesores)
+              </td>
+              <td class="p-3">30 - 60 profesores activos</td>
+              <td class="p-3 text-emerald-600 font-medium">50.000 usuarios activos de por vida</td>
+              <td class="p-3 text-right font-bold text-emerald-600">$0.00 USD</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-globe text-amber-600"></i> CloudFront + S3 (Certificado SSL)
+              </td>
+              <td class="p-3">~4 GB transferencia web</td>
+              <td class="p-3 text-emerald-600 font-medium">1.000 GB (1 TB) + Certificado ACM GRATIS</td>
+              <td class="p-3 text-right font-bold text-emerald-600">$0.00 USD</td>
+            </tr>
+            <tr class="bg-emerald-50/70 font-bold text-slate-900 text-sm">
+              <td class="p-3" colspan="3">COSTO TOTAL MENSUAL PARA EL COLEGIO:</td>
+              <td class="p-3 text-right text-emerald-600">$0.00 / mes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- 7. HOJA DE RUTA DE IMPLEMENTACIÓN RECOMENDADA -->
+    <section class="bg-slate-900 text-white rounded-2xl p-6 sm:p-8">
+      <div class="max-w-3xl mb-6">
+        <span class="text-xs font-bold uppercase tracking-wider text-aws-orange">Puesta en Marcha Segura</span>
+        <h2 class="text-xl font-bold">Pasos Sencillos para Desplegar este Sistema</h2>
+        <p class="text-xs text-slate-400 mt-1">Cómo pasar de las citas desordenadas en WhatsApp a este sistema en 3 fases prácticas:</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <div class="text-aws-orange font-bold text-base mb-1">Fase 1: Configurar AWS con Cifrado</div>
+          <p class="text-slate-300">
+            Crear la tabla en DynamoDB con clave KMS activada, configurar Cognito para los docentes y desplegar S3 + CloudFront con certificado SSL gratuito (ACM).
+          </p>
+        </div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <div class="text-aws-orange font-bold text-base mb-1">Fase 2: Enlace en WhatsApp</div>
+          <p class="text-slate-300">
+            Configurar en WhatsApp Business el mensaje de bienvenida automático: <em>"Hola, para pedir o consultar su cita docente haga clic en: citas.colegio.edu"</em>.
+          </p>
+        </div>
+        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+          <div class="text-aws-orange font-bold text-base mb-1">Fase 3: Capacitación de 5 Min</div>
+          <p class="text-slate-300">
+            Los profesores entran desde su celular a la misma web, inician sesión con su token seguro y ven en tiempo real su lista de citas del día con nombres de acudiente y alumno.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC FOR SIMULATOR -->
+  <script>
+    const simulationData = {
+      parent: {
+        title: "Flujo del Acudiente: Agendando Cita Segura",
+        status: "Ejecutando Flujo Acudiente",
+        steps: [
+          {
+            num: "1",
+            nodeId: "arch-parent",
+            title: "El Acudiente toca el enlace seguro en WhatsApp",
+            desc: "Abre https://citas.colegio.edu desde su teléfono móvil.",
+            log: "> [SEGURIDAD EN TRÁNSITO] Negociando conexión segura TLS 1.3 con certificado ACM (2048-bit RSA)."
+          },
+          {
+            num: "2",
+            nodeId: "arch-cloudfront",
+            title: "CloudFront y S3 entregan la Web Cifrada",
+            desc: "La página carga en 0.2s vía HTTPS con cabecera HSTS activa.",
+            log: "> [SEGURIDAD EN REPOSO] Frontend recuperado de S3 (SSE-AES256) mediante Origin Access Control (OAC)."
+          },
+          {
+            num: "3",
+            nodeId: "arch-lambda",
+            title: "Lambda consulta los horarios libres",
+            desc: "Lambda se ejecuta en un microcontenedor aislado (Firecracker) de AWS.",
+            log: "> [SEGURIDAD EN TRÁNSITO] Invocación cifrada a getHorariosDisponibles(ProfesorID='GARCIA'). Horarios libres: [09:00, 10:00, 11:30]."
+          },
+          {
+            num: "4",
+            nodeId: "arch-dynamodb",
+            title: "DynamoDB ejecuta Bloqueo y Cifra en Reposo",
+            desc: "El padre escoge las 10:00 AM. DynamoDB bloquea la plaza con condición atómica y cifra el registro en el disco.",
+            log: "> [SEGURIDAD EN REPOSO] PutItem con ConditionExpression: attribute_not_exists(FechaHora). Cifrado con AWS KMS (AES-256). APROBADO 200 OK."
+          },
+          {
+            num: "5",
+            nodeId: "arch-ses",
+            title: "Confirmación Inmediata Cifrada",
+            desc: "Se envía mensaje de confirmación por túnel HTTPS seguro al acudiente.",
+            log: "> [SEGURIDAD EN TRÁNSITO] Notificación digital remitida mediante API segura TLS 1.2+."
+          }
+        ]
+      },
+      teacher: {
+        title: "Flujo del Profesor: Consultando su Agenda Privada",
+        status: "Ejecutando Flujo Profesor",
+        steps: [
+          {
+            num: "1",
+            nodeId: "arch-teacher",
+            title: "El Profesor abre su portal privado",
+            desc: "Ingresa correo y contraseña escolar desde su teléfono o computador.",
+            log: "> [SEGURIDAD EN TRÁNSITO] Envío de credenciales sobre canal seguro TLS 1.3."
+          },
+          {
+            num: "2",
+            nodeId: "arch-cognito",
+            title: "Cognito valida identidad institucional",
+            desc: "Verifica el hash criptográfico en reposo y emite un Token JWT firmado asimétricamente.",
+            log: "> [SEGURIDAD EN REPOSO] Hash verificado con PBKDF2. Token JWT emitido con claims: { sub: 'prof_garcia', role: 'teacher' }."
+          },
+          {
+            num: "3",
+            nodeId: "arch-apigateway",
+            title: "API Gateway valida la firma criptográfica",
+            desc: "Comprueba el token del profesor para asegurar que nadie suplante a otro colega.",
+            log: "> [AUTORIZACIÓN] JWT Authorizer valida la firma RS256 de Cognito. Petición GET /citas-docente autorizada."
+          },
+          {
+            num: "4",
+            nodeId: "arch-dynamodb",
+            title: "DynamoDB entrega ÚNICAMENTE sus citas cifradas",
+            desc: "El profesor visualiza su lista de citas del día. Los datos son descifrados en memoria de forma transparente por KMS.",
+            log: "> [SEGURIDAD EN REPOSO] DynamoDB descifra datos con KMS y filtra por PartitionKey='prof_garcia'. Devuelve 3 citas programadas."
+          }
+        ]
+      }
+    };
+
+    let simTimer = null;
+
+    function resetSimulation() {
+      if (simTimer) clearInterval(simTimer);
+      
+      // Clean highlights
+      document.querySelectorAll('.node-transition').forEach(el => {
+        el.classList.remove('step-active', 'pulse-glow');
+      });
+
+      document.getElementById('sim-status-badge').innerText = "En espera";
+      document.getElementById('sim-status-badge').className = "text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono";
+      
+      document.getElementById('sim-log').innerHTML = '<p class="text-slate-400">// Selecciona un flujo para visualizar la ejecución y cifrado en vivo.</p>';
+      
+      document.getElementById('simulation-steps').innerHTML = `
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs">
+          Haz clic en <strong>"Simular: Acudiente pide Cita"</strong> o <strong>"Simular: Profesor ve su Agenda"</strong> para iniciar la explicación interactiva paso a paso con detalle de seguridad.
+        </div>
+      `;
+    }
+
+    function runSimulation(type) {
+      resetSimulation();
+      const sim = simulationData[type];
+      
+      const statusBadge = document.getElementById('sim-status-badge');
+      statusBadge.innerText = sim.status;
+      statusBadge.className = type === 'parent' 
+        ? "text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30"
+        : "text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30";
+
+      const stepsContainer = document.getElementById('simulation-steps');
+      stepsContainer.innerHTML = `
+        <div class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full ${type === 'parent' ? 'bg-sky-500' : 'bg-emerald-500'}"></span>
+          ${sim.title}
+        </div>
+        <div id="steps-list" class="space-y-2"></div>
+      `;
+
+      const stepsList = document.getElementById('steps-list');
+      const logBox = document.getElementById('sim-log');
+      logBox.innerHTML = '';
+
+      let currentStepIndex = 0;
+
+      function highlightNextStep() {
+        if (currentStepIndex >= sim.steps.length) {
+          clearInterval(simTimer);
+          const endP = document.createElement('p');
+          endP.className = "text-emerald-400 font-bold mt-2";
+          endP.innerText = "✓ Proceso finalizado: 100% cifrado en tránsito (TLS 1.3) y en reposo (AES-256 KMS).";
+          logBox.appendChild(endP);
+          return;
+        }
+
+        const step = sim.steps[currentStepIndex];
+
+        // Clean previous node highlight
+        document.querySelectorAll('.node-transition').forEach(el => {
+          el.classList.remove('step-active', 'pulse-glow');
+        });
+
+        // Highlight current architectural node
+        const targetNode = document.getElementById(step.nodeId);
+        if (targetNode) {
+          targetNode.classList.add('step-active', 'pulse-glow');
+          targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Add step card
+        const card = document.createElement('div');
+        card.className = "p-3 rounded-lg border border-slate-200 bg-white shadow-sm flex items-start gap-3 transition-all";
+        card.innerHTML = `
+          <div class="w-6 h-6 rounded-full ${type === 'parent' ? 'bg-sky-500' : 'bg-emerald-500'} text-white text-xs font-bold flex items-center justify-center shrink-0">
+            ${step.num}
+          </div>
+          <div>
+            <div class="font-bold text-slate-900 text-xs">${step.title}</div>
+            <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${step.desc}</p>
+          </div>
+        `;
+        stepsList.appendChild(card);
+
+        // Add log
+        const logLine = document.createElement('p');
+        logLine.className = type === 'parent' ? 'text-sky-300' : 'text-emerald-300';
+        logLine.innerText = step.log;
+        logBox.appendChild(logLine);
+
+        currentStepIndex++;
+      }
+
+      highlightNextStep();
+      simTimer = setInterval(highlightNextStep, 2200);
+    }
+  </script>
+</body>
+</html>

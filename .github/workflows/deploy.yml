@@ -1,0 +1,181 @@
+name: Pipeline CI/CD Serverless Escolar (OIDC)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Permisos necesarios para intercambiar tokens OIDC con AWS
+permissions:
+  id-token: write   # Obligatorio para solicitar el JWT a GitHub OIDC
+  contents: read    # Para clonar el repositorio
+
+env:
+  AWS_REGION: "us-east-1"
+  # ARN del Rol IAM creado en la fase de Bootstrap (Configurable en Secrets o variable)
+  AWS_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN || 'arn:aws:iam::ACCOUNT_ID:role/citas-escolares-github-oidc-role' }}
+
+jobs:
+  # ============================================================================
+  # FASE 1: DESPLIEGUE DE LA INFRAESTRUCTURA (TERRAFORM)
+  # ============================================================================
+  infraestructura:
+    name: "1. Desplegar Infraestructura (Terraform)"
+    runs-on: ubuntu-latest
+    outputs:
+      cloudfront_id: ${{ steps.tf_outputs.outputs.cloudfront_id }}
+      cloudfront_url: ${{ steps.tf_outputs.outputs.cloudfront_url }}
+      api_url: ${{ steps.tf_outputs.outputs.api_url }}
+      s3_bucket: ${{ steps.tf_outputs.outputs.s3_bucket }}
+      user_pool_id: ${{ steps.tf_outputs.outputs.user_pool_id }}
+      client_id: ${{ steps.tf_outputs.outputs.client_id }}
+
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Autenticación con AWS vía OIDC (Sin Access Keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+
+      - name: Extraer Variables de Salida de Terraform
+        id: tf_outputs
+        working-directory: ./terraform
+        run: |
+          echo "api_url=$(terraform output -raw api_gateway_url)" >> $GITHUB_OUTPUT
+          echo "s3_bucket=$(terraform output -raw s3_bucket_name)" >> $GITHUB_OUTPUT
+          echo "cloudfront_url=$(terraform output -raw cloudfront_url)" >> $GITHUB_OUTPUT
+          echo "user_pool_id=$(terraform output -raw cognito_user_pool_id)" >> $GITHUB_OUTPUT
+          echo "client_id=$(terraform output -raw cognito_client_id)" >> $GITHUB_OUTPUT
+          # Obtener ID de la distribución CloudFront
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='Portal Web de Citas Escolares - Colegio San Martin'].Id" --output text)
+          echo "cloudfront_id=$DIST_ID" >> $GITHUB_OUTPUT
+
+  # ============================================================================
+  # FASE 2: DESPLIEGUE DEL CÓDIGO DEL BACKEND (LAMBDA FUNCTIONS)
+  # ============================================================================
+  backend:
+    name: "2. Desplegar Código Backend (Lambdas)"
+    needs: [infraestructura]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Autenticación con AWS vía OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Empaquetar y Actualizar Lambdas
+        run: |
+          echo "==> Desplegando get_disponibilidad..."
+          cd backend/get_disponibilidad
+          zip -r ../../get_disponibilidad.zip lambda_function.py
+          cd ../..
+          aws lambda update-function-code \
+            --function-name citas-escolares-get-disponibilidad-prod \
+            --zip-file fileb://get_disponibilidad.zip
+
+          echo "==> Desplegando reservar_cita..."
+          cd backend/reservar_cita
+          zip -r ../../reservar_cita.zip lambda_function.py
+          cd ../..
+          aws lambda update-function-code \
+            --function-name citas-escolares-reservar-cita-prod \
+            --zip-file fileb://reservar_cita.zip
+
+          echo "==> Desplegando citas_profesor..."
+          cd backend/citas_profesor
+          zip -r ../../citas_profesor.zip lambda_function.py
+          cd ../..
+          aws lambda update-function-code \
+            --function-name citas-escolares-citas-profesor-prod \
+            --zip-file fileb://citas_profesor.zip
+
+          echo "==> Desplegando bloquear_horario..."
+          cd backend/bloquear_horario
+          zip -r ../../bloquear_horario.zip lambda_function.py
+          cd ../..
+          aws lambda update-function-code \
+            --function-name citas-escolares-bloquear-horario-prod \
+            --zip-file fileb://bloquear_horario.zip
+
+  # ============================================================================
+  # FASE 3: DESPLIEGUE DEL FRONTEND (S3 + CLOUDFRONT CACHE INVALIDATION)
+  # ============================================================================
+  frontend:
+    name: "3. Desplegar Frontend (S3 & CloudFront)"
+    needs: [infraestructura, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Autenticación con AWS vía OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Inyectar Variables de Entorno en config.js
+        run: |
+          cat <<EOF > frontend/config.js
+          window.APP_CONFIG = {
+            API_BASE_URL: "${{ needs.infraestructura.outputs.api_url }}",
+            COGNITO_USER_POOL_ID: "${{ needs.infraestructura.outputs.user_pool_id }}",
+            COGNITO_CLIENT_ID: "${{ needs.infraestructura.outputs.client_id }}",
+            AWS_REGION: "${{ env.AWS_REGION }}",
+            SCHOOL_NAME: "Colegio San Martín",
+            TEACHERS: [
+              { id: "prof_garcia", name: "Prof. Carlos García", subject: "Matemáticas", email: "cgarcia@colegio.edu" },
+              { id: "prof_rodriguez", name: "Prof. Elena Rodríguez", subject: "Ciencias Naturales", email: "erodriguez@colegio.edu" },
+              { id: "prof_martinez", name: "Prof. Andrés Martínez", subject: "Español y Literatura", email: "amartinez@colegio.edu" },
+              { id: "prof_lopez", name: "Prof. Sofía López", subject: "Inglés", email: "slopez@colegio.edu" }
+            ]
+          };
+          EOF
+          cat frontend/config.js
+
+      - name: Sincronizar Frontend con Bucket S3
+        run: |
+          aws s3 sync ./frontend s3://${{ needs.infraestructura.outputs.s3_bucket }} \
+            --delete \
+            --cache-control "max-age=3600"
+
+      - name: Invalidar Caché de CloudFront (Actualización Inmediata)
+        run: |
+          DIST_ID="${{ needs.infraestructura.outputs.cloudfront_id }}"
+          if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ]; then
+            echo "Invalidando distribución: $DIST_ID"
+            aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
+          else
+            echo "CloudFront ID no localizado, omitiendo invalidación explícita."
+          fi

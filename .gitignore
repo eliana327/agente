@@ -1,0 +1,23 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+.terraform.tfstate.lock.info
+build/*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+
+# Sistema Operativo & IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
