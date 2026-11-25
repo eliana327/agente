@@ -75,7 +75,11 @@ import {
 resource "aws_iam_openid_connect_provider" "github_oidc" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f8d264fcd9",
+    data.tls_certificate.github.certificates[0].sha1_fingerprint
+  ]
 }
 
 # ==============================================================================
@@ -97,10 +101,16 @@ resource "aws_iam_role" "github_ci_cd_role" {
         Condition = {
           StringLike = {
             # Permite a cualquier repositorio de la cuenta de GitHub asumir este rol
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org_or_user}/*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_org_or_user}/*",
+              "repo:${var.github_org_or_user}/*:*"
+            ]
           }
           StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:aud" = [
+              "sts.amazonaws.com",
+              "https://github.com/${var.github_org_or_user}"
+            ]
           }
         }
       }
