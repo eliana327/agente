@@ -1,40 +1,30 @@
-# Guía de Bootstrap, OIDC y Pipeline de CI/CD
+# Guía de Bootstrap, OIDC Multirrepositorio y Pipeline de CI/CD
 
 Esta arquitectura implementa las mejores prácticas recomendadas por el **AWS Well-Architected Framework**:
-1. **Fase de Bootstrap:** Creación previa del almacenamiento del estado remoto de Terraform (S3 + DynamoDB) y configuración del proveedor de identidad OIDC.
-2. **Autenticación sin Claves Estáticas (OIDC):** GitHub Actions asume un rol IAM mediante tokens criptográficos temporales (`sts:AssumeRoleWithWebIdentity`). **Cero riesgo de filtración de `AWS_ACCESS_KEY_ID` o `AWS_SECRET_ACCESS_KEY`**.
-3. **Pipeline Escalonado en 3 Fases:** Despliega primero la infraestructura (bases de datos, auth, CDN), luego actualiza el backend (Lambdas) y finalmente inyecta las URLs y despliega el frontend web invalidando la caché de CloudFront.
+1. **Fase de Bootstrap Centralizada (Multirrepositorio):** Creación del almacenamiento central del estado remoto de Terraform (S3 + DynamoDB) y configuración del proveedor de identidad OIDC (`token.actions.githubusercontent.com`).
+2. **Autenticación sin Claves Estáticas (OIDC):** GitHub Actions asume un rol IAM mediante tokens criptográficos temporales (`sts:AssumeRoleWithWebIdentity`). La política de confianza está configurada para admitir cualquier repositorio del usuario/organización (`repo:eliana327/*`).
+3. **Reutilización entre Proyectos:** El backend remoto (S3 y DynamoDB) y el rol IAM OIDC (`arn:aws:iam::079301214534:role/citas-escolares-github-oidc-role`) son compartidos por todos los proyectos (como `agente` y `autoscaling`) usando diferentes prefijos de estado (keys).
 
 ---
 
-## 🛠️ Paso 1: Ejecutar la Fase de Bootstrap (Una sola vez)
+## 🛠️ Recursos Creados en AWS
 
-Antes de ejecutar el pipeline, se deben crear los recursos de arranque ejecutando Terraform dentro de la carpeta `bootstrap/`:
-
-```bash
-cd bootstrap
-terraform init
-terraform apply -auto-approve
-```
-
-Este comando creará:
 * **Bucket S3 del Estado:** `citas-escolares-tf-state-us-east-1` (versionado y cifrado AES-256).
 * **Tabla DynamoDB de Bloqueos:** `citas-escolares-tf-locks` (evita corrupción del estado).
-* **Proveedor OIDC de GitHub Actions:** `token.actions.githubusercontent.com`.
-* **Rol IAM de Despliegue:** `arn:aws:iam::<TU_ACCOUNT_ID>:role/citas-escolares-github-oidc-role`.
-
-Copia el ARN del rol resultante que se mostrará en los outputs.
+* **Proveedor OIDC de GitHub Actions:** `arn:aws:iam::079301214534:oidc-provider/token.actions.githubusercontent.com`.
+* **Rol IAM de Despliegue:** `arn:aws:iam::079301214534:role/citas-escolares-github-oidc-role`.
 
 ---
 
-## 🔐 Paso 2: Configurar el Repositorio de GitHub
+## 🔐 Configuración en GitHub Actions
 
-En tu repositorio de GitHub ve a:
-**Settings > Secrets and variables > Actions > Variables (o Secrets)**
+En cualquier repositorio de tu cuenta de GitHub (ej. `agente` o `autoscaling`), ve a:
+**Settings > Secrets and variables > Actions > Variables** (o Secrets)
 
-Crea una variable o secreto con:
+Crea una variable:
 * **Nombre:** `AWS_OIDC_ROLE_ARN`
-* **Valor:** El ARN del rol obtenido en el Paso 1 (ej: `arn:aws:iam::123456789012:role/citas-escolares-github-oidc-role`).
+* **Valor:** `arn:aws:iam::079301214534:role/citas-escolares-github-oidc-role`
+*(Si no se define la variable, los pipelines ya incluyen este valor por defecto)*.
 
 ---
 

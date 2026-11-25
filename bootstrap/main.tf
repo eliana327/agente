@@ -66,6 +66,12 @@ data "tls_certificate" "github" {
   url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
 }
 
+# Importación para asociar el proveedor OIDC existente en la cuenta AWS
+import {
+  to = aws_iam_openid_connect_provider.github_oidc
+  id = "arn:aws:iam::079301214534:oidc-provider/token.actions.githubusercontent.com"
+}
+
 resource "aws_iam_openid_connect_provider" "github_oidc" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
@@ -77,7 +83,7 @@ resource "aws_iam_openid_connect_provider" "github_oidc" {
 # ==============================================================================
 resource "aws_iam_role" "github_ci_cd_role" {
   name        = "${var.project_name}-github-oidc-role"
-  description = "Rol asumido por GitHub Actions mediante OIDC para CI/CD sin Access Keys"
+  description = "Rol asumido por GitHub Actions mediante OIDC para CI/CD multirrepositorio sin Access Keys"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -90,8 +96,8 @@ resource "aws_iam_role" "github_ci_cd_role" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringLike = {
-            # Limita a que únicamente el repositorio oficial pueda asumir este rol
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org_or_user}/${var.github_repo_name}:*"
+            # Permite a cualquier repositorio de la cuenta de GitHub asumir este rol
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org_or_user}/*"
           }
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
@@ -105,7 +111,7 @@ resource "aws_iam_role" "github_ci_cd_role" {
 # Política con los permisos necesarios para gestionar la infraestructura
 resource "aws_iam_policy" "ci_cd_permissions" {
   name        = "${var.project_name}-ci-cd-policy"
-  description = "Permisos necesarios para desplegar la solución escolar serverless"
+  description = "Permisos necesarios para desplegar soluciones serverless, autoscaling y balanceo"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -117,9 +123,11 @@ resource "aws_iam_policy" "ci_cd_permissions" {
           "s3:ListBucket",
           "s3:GetObject",
           "s3:PutObject",
+          "s3:DeleteObject",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
         ]
         Resource = [
           aws_s3_bucket.tf_state.arn,
@@ -128,7 +136,7 @@ resource "aws_iam_policy" "ci_cd_permissions" {
         ]
       },
       {
-        Sid    = "FullServerlessManagement"
+        Sid    = "FullInfrastructureManagement"
         Effect = "Allow"
         Action = [
           "s3:*",
@@ -137,7 +145,12 @@ resource "aws_iam_policy" "ci_cd_permissions" {
           "apigateway:*",
           "cognito-idp:*",
           "dynamodb:*",
-          "iam:*"
+          "iam:*",
+          "ec2:*",
+          "elasticloadbalancing:*",
+          "autoscaling:*",
+          "cloudwatch:*",
+          "logs:*"
         ]
         Resource = "*"
       }
